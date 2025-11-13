@@ -3,302 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simpsons Analysis Results</title>
+    <title>Simpsons Episode Popularity Classification</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #ffd700 0%, #ff6b35 100%); padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { text-align: center; color: white; margin-bottom: 30px; }
-        .header h1 { font-size: 3em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-        .header p { font-size: 1.2em; opacity: 0.9; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 20px; }
-        .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.3s ease; }
-        .card:hover { transform: translateY(-5px); }
-        .card h2 { color: #667eea; margin-bottom: 20px; font-size: 1.5em; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
-        .metric { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 10px; }
-        .metric-label { font-weight: 600; color: #333; }
-        .metric-value { font-size: 1.3em; font-weight: bold; color: #667eea; }
+        .header h1 { font-size: 3em; text-shadow: 3px 3px 6px rgba(0,0,0,0.3); }
+        .card { background: white; border-radius: 15px; padding: 25px; margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .card h2 { color: #ff6b35; border-bottom: 3px solid #ffd700; padding-bottom: 10px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #ff6b35; color: white; }
+        .best-row { background: #ffd70033; font-weight: bold; }
+        .chart-container { height: 400px; margin: 20px 0; }
+        .metric { display: inline-block; margin: 10px 20px; padding: 15px 25px; background: #f8f9fa; border-radius: 10px; }
+        .metric-value { font-size: 2em; font-weight: bold; color: #ff6b35; }
+        .metric-label { color: #666; font-size: 0.9em; }
         .feature-bar { margin: 10px 0; }
-        .feature-name { font-weight: 500; margin-bottom: 5px; color: #333; }
-        .bar-container { background: #e0e7ff; height: 30px; border-radius: 15px; overflow: hidden; position: relative; }
-        .bar-fill { height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; font-size: 0.9em; transition: width 1s ease; }
-        .prediction-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea; }
-        .prediction-row.good { border-left-color: #10b981; }
-        .prediction-row.bad { border-left-color: #ef4444; }
-        .prediction-item { text-align: center; }
-        .prediction-label { font-size: 0.85em; color: #666; margin-bottom: 3px; }
-        .prediction-value { font-size: 1.2em; font-weight: bold; color: #333; }
-        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; font-weight: 600; margin: 5px; background: #d1fae5; color: #065f46; }
-        .chart-container { position: relative; height: 300px; margin-top: 20px; }
-        .full-width { grid-column: 1 / -1; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .card { animation: fadeIn 0.5s ease forwards; }
+        .bar-container { background: #f0f0f0; height: 30px; border-radius: 15px; overflow: hidden; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #ffd700 0%, #ff6b35 100%); display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; }
+        .confusion-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .cm-cell { padding: 30px; border-radius: 10px; text-align: center; font-size: 1.5em; font-weight: bold; }
+        .cm-tn { background: #d1fae5; color: #065f46; }
+        .cm-fp { background: #fee2e2; color: #991b1b; }
+        .cm-fn { background: #fee2e2; color: #991b1b; }
+        .cm-tp { background: #d1fae5; color: #065f46; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎬 Simpsons Episode Analysis</h1>
-            <p>Machine Learning Insights Dashboard</p>
+            <h1> Simpsons Episode Popularity Classification</h1>
+            <p>Binary Classification: Popular vs Not Popular</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Threshold: IMDB Rating > 7.30 = Popular</p>
         </div>
         
-        <div class="grid">
-            <div class="card">
-                <h2>📊 Model Performance</h2>
-                <div class="metric">
-                    <span class="metric-label">Training R²</span>
-                    <span class="metric-value" id="train-r2">-</span>
+        <div class="card">
+            <h2> Best Model: SVM</h2>
+            <div class="metric">
+                <div class="metric-value">0.942</div>
+                <div class="metric-label">Accuracy</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">0.939</div>
+                <div class="metric-label">Precision</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">0.920</div>
+                <div class="metric-label">Recall</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">0.929</div>
+                <div class="metric-label">F1 Score</div>
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px;">
+                <strong> Interpretation:</strong><br>
+                The model correctly classifies <strong>94.2%</strong> of episodes.<br>
+                F1 Score of <strong>0.929</strong> shows balanced precision and recall.
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2> Confusion Matrix</h2>
+            <div class="confusion-matrix">
+                <div class="cm-cell cm-tn">
+                    <div>True Negatives</div>
+                    <div>67</div>
                 </div>
-                <div class="metric">
-                    <span class="metric-label">Test R²</span>
-                    <span class="metric-value" id="test-r2">-</span>
+                <div class="cm-cell cm-fp">
+                    <div>False Positives</div>
+                    <div>3</div>
                 </div>
-                <div class="metric">
-                    <span class="metric-label">Mean Absolute Error</span>
-                    <span class="metric-value" id="mae">-</span>
+                <div class="cm-cell cm-fn">
+                    <div>False Negatives</div>
+                    <div>4</div>
                 </div>
-                <div style="margin-top: 15px;">
-                    <span class="status-badge">Model Ready</span>
+                <div class="cm-cell cm-tp">
+                    <div>True Positives</div>
+                    <div>46</div>
                 </div>
             </div>
-            
-            <div class="card">
-                <h2>📁 Dataset Information</h2>
-                <div class="metric">
-                    <span class="metric-label">Total Episodes</span>
-                    <span class="metric-value" id="total-episodes">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Training Episodes</span>
-                    <span class="metric-value" id="train-episodes">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Test Episodes</span>
-                    <span class="metric-value" id="test-episodes">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Features Used</span>
-                    <span class="metric-value" id="feature-count">-</span>
-                </div>
+        </div>
+        
+        <div class="card">
+            <h2> Model Comparison</h2>
+            <div class="chart-container">
+                <canvas id="comparisonChart"></canvas>
             </div>
-            
-            <div class="card full-width">
-                <h2>🎯 Most Important Features</h2>
-                <p style="color: #666; margin-bottom: 15px;">What factors most influence episode ratings?</p>
-                <div id="feature-list"></div>
-            </div>
-            
-            <div class="card full-width">
-                <h2>📈 Prediction Accuracy</h2>
-                <div class="chart-container">
-                    <canvas id="predictionChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="card full-width">
-                <h2>🎲 Sample Predictions</h2>
-                <div id="predictions-list"></div>
-            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Accuracy</th>
+                        <th>Precision</th>
+                        <th>Recall</th>
+                        <th>F1 Score</th>
+                    </tr>
+                </thead>
+                <tbody id="comparisonTable"></tbody>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>🎯 Feature Importance</h2>
+            <div id="featureImportance"></div>
         </div>
     </div>
     
     <script>
-        const analysisResults = {
-  "modelPerformance": {
-    "trainR2": 0.913868580115794,
-    "testR2": 0.4878968257374865,
-    "mae": 0.40722621145908444
-  },
-  "datasetInfo": {
-    "totalEpisodes": 597,
-    "trainEpisodes": 477,
-    "testEpisodes": 120,
-    "featureCount": 10
-  },
-  "featureImportance": [
-    {
-      "name": "year",
-      "importance": 0.2967078018598929
-    },
-    {
-      "name": "original_air_year",
-      "importance": 0.2777176888856834
-    },
-    {
-      "name": "season",
-      "importance": 0.1551956484844979
-    },
-    {
-      "name": "total_lines",
-      "importance": 0.08191470879670563
-    },
-    {
-      "name": "unique_characters",
-      "importance": 0.059864009855057014
-    },
-    {
-      "name": "avg_words_per_line",
-      "importance": 0.058859962785627884
-    },
-    {
-      "name": "number_in_season",
-      "importance": 0.044930418441235756
-    },
-    {
-      "name": "month",
-      "importance": 0.02302950548439023
-    },
-    {
-      "name": "day_of_week",
-      "importance": 0.0017802554069093527
-    },
-    {
-      "name": "speaking_lines",
-      "importance": 0.0
-    }
-  ],
-  "predictions": [
-    {
-      "predicted": 6.901892817490744,
-      "actual": 6.5,
-      "error": 0.4018928174907437
-    },
-    {
-      "predicted": 6.531665169498565,
-      "actual": 7.6,
-      "error": 1.0683348305014349
-    },
-    {
-      "predicted": 6.756697848281744,
-      "actual": 6.9,
-      "error": 0.143302151718256
-    },
-    {
-      "predicted": 6.8525323438077805,
-      "actual": 7.0,
-      "error": 0.14746765619221947
-    },
-    {
-      "predicted": 6.752909355636356,
-      "actual": 7.1,
-      "error": 0.3470906443636439
-    }
-  ]
-};
+        const data = {"bestModel": "SVM", "threshold": 7.3, "modelComparison": [{"name": "Logistic Regression", "accuracy": 0.9333333333333333, "precision": 0.9375, "recall": 0.9, "f1": 0.9183673469387755}, {"name": "Naive Bayes", "accuracy": 0.9333333333333333, "precision": 1.0, "recall": 0.84, "f1": 0.9130434782608695}, {"name": "Decision Tree", "accuracy": 0.925, "precision": 0.9361702127659575, "recall": 0.88, "f1": 0.9072164948453608}, {"name": "Random Forest", "accuracy": 0.9416666666666667, "precision": 0.9777777777777777, "recall": 0.88, "f1": 0.9263157894736842}, {"name": "Gradient Boosting", "accuracy": 0.925, "precision": 0.9361702127659575, "recall": 0.88, "f1": 0.9072164948453608}, {"name": "SVM", "accuracy": 0.9416666666666667, "precision": 0.9387755102040817, "recall": 0.92, "f1": 0.9292929292929293}], "featureImportance": [], "confusionMatrix": {"tn": 67, "fp": 3, "fn": 4, "tp": 46}, "bestModelMetrics": {"accuracy": 0.9416666666666667, "precision": 0.9387755102040817, "recall": 0.92, "f1": 0.9292929292929293}};
         
-        document.getElementById('train-r2').textContent = analysisResults.modelPerformance.trainR2.toFixed(3);
-        document.getElementById('test-r2').textContent = analysisResults.modelPerformance.testR2.toFixed(3);
-        document.getElementById('mae').textContent = analysisResults.modelPerformance.mae.toFixed(3);
-        
-        document.getElementById('total-episodes').textContent = analysisResults.datasetInfo.totalEpisodes;
-        document.getElementById('train-episodes').textContent = analysisResults.datasetInfo.trainEpisodes;
-        document.getElementById('test-episodes').textContent = analysisResults.datasetInfo.testEpisodes;
-        document.getElementById('feature-count').textContent = analysisResults.datasetInfo.featureCount;
-        
-        const featureList = document.getElementById('feature-list');
-        analysisResults.featureImportance.forEach(feature => {
-            const percentage = (feature.importance * 100).toFixed(1);
-            const featureDiv = document.createElement('div');
-            featureDiv.className = 'feature-bar';
-            featureDiv.innerHTML = `
-                <div class="feature-name">${feature.name}</div>
-                <div class="bar-container">
-                    <div class="bar-fill" style="width: ${percentage}%">${percentage}%</div>
-                </div>
+        // Populate comparison table
+        const tbody = document.getElementById('comparisonTable');
+        data.modelComparison.forEach(model => {
+            const row = tbody.insertRow();
+            if (model.name === data.bestModel) row.className = 'best-row';
+            row.innerHTML = `
+                <td>${model.name}</td>
+                <td>${model.accuracy.toFixed(3)}</td>
+                <td>${model.precision.toFixed(3)}</td>
+                <td>${model.recall.toFixed(3)}</td>
+                <td>${model.f1.toFixed(3)}</td>
             `;
-            featureList.appendChild(featureDiv);
         });
         
-        const predictionsList = document.getElementById('predictions-list');
-        analysisResults.predictions.forEach((pred, idx) => {
-            const errorClass = pred.error < 0.3 ? 'good' : 'bad';
-            const predDiv = document.createElement('div');
-            predDiv.className = `prediction-row ${errorClass}`;
-            predDiv.innerHTML = `
-                <div class="prediction-item">
-                    <div class="prediction-label">Predicted</div>
-                    <div class="prediction-value">${pred.predicted.toFixed(2)}</div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">Actual</div>
-                    <div class="prediction-value">${pred.actual.toFixed(2)}</div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">Error</div>
-                    <div class="prediction-value">${pred.error.toFixed(2)}</div>
-                </div>
-            `;
-            predictionsList.appendChild(predDiv);
-        });
-        
-        const ctx = document.getElementById('predictionChart').getContext('2d');
-        const minVal = Math.min(...analysisResults.predictions.map(p => Math.min(p.actual, p.predicted))) - 0.5;
-        const maxVal = Math.max(...analysisResults.predictions.map(p => Math.max(p.actual, p.predicted))) + 0.5;
-        
-        new Chart(ctx, {
-            type: 'scatter',
+        // Model comparison chart
+        new Chart(document.getElementById('comparisonChart'), {
+            type: 'bar',
             data: {
-                datasets: [{
-                    label: 'Predictions vs Actual',
-                    data: analysisResults.predictions.map(p => ({
-                        x: p.actual,
-                        y: p.predicted
-                    })),
-                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 2,
-                    pointRadius: 8,
-                    pointHoverRadius: 12
-                }, {
-                    label: 'Perfect Prediction',
-                    data: [{x: minVal, y: minVal}, {x: maxVal, y: maxVal}],
-                    type: 'line',
-                    borderColor: 'rgba(239, 68, 68, 0.5)',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    fill: false
-                }]
+                labels: data.modelComparison.map(m => m.name),
+                datasets: [
+                    {
+                        label: 'Accuracy',
+                        data: data.modelComparison.map(m => m.accuracy),
+                        backgroundColor: 'rgba(255, 215, 0, 0.7)'
+                    },
+                    {
+                        label: 'F1 Score',
+                        data: data.modelComparison.map(m => m.f1),
+                        backgroundColor: 'rgba(255, 107, 53, 0.7)'
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Actual Rating',
-                            font: { size: 14, weight: 'bold' }
-                        },
-                        min: minVal,
-                        max: maxVal
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Predicted Rating',
-                            font: { size: 14, weight: 'bold' }
-                        },
-                        min: minVal,
-                        max: maxVal
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `Predicted: ${context.parsed.y.toFixed(2)}, Actual: ${context.parsed.x.toFixed(2)}`;
-                            }
-                        }
-                    }
+                    y: { beginAtZero: true, max: 1 }
                 }
             }
         });
+        
+        // Feature importance
+        const featureDiv = document.getElementById('featureImportance');
+        if (data.featureImportance.length > 0) {
+            data.featureImportance.forEach(feat => {
+                const pct = (feat.importance * 100).toFixed(1);
+                featureDiv.innerHTML += `
+                    <div class="feature-bar">
+                        <div>${feat.name}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: ${pct}%">${pct}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            featureDiv.innerHTML = '<p>Feature importance not available for this model.</p>';
+        }
     </script>
 </body>
 </html>
