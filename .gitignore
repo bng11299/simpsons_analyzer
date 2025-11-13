@@ -1,0 +1,3 @@
+simpsons_*.csv
+/venv
+simpsons_classification_report.html

@@ -16,7 +16,7 @@ import json
 
 def load_and_explore_data():
     """Load all four Simpsons datasets and explore them"""
-    base_path = r"C:\Users\Browndan\Downloads\simpsons\simpsons"
+    base_path = r"./"
     
     print("="*70)
     print("STEP 1: LOADING AND EXPLORING THE FOUR DATASETS")
